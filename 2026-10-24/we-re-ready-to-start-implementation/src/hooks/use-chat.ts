@@ -21,7 +21,6 @@ export function useChat() {
   const [roomName, setRoomName] = useState("");
   const [invite, setInvite] = useState<Invite | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [showPeople, setShowPeople] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -133,7 +132,7 @@ export function useChat() {
     if (error) { setError("Couldn't load earlier messages."); return; }
     setMessages(previous => mergeMessages(previous, data || [])); setHasOlder(data?.length === 100);
   }
-  function mention(id: string) { setDraft(previous => `${previous}${previous ? " " : ""}@${id[0].toUpperCase()}${id.slice(1)} `); composer.current?.focus(); setShowPeople(false); }
+  function mention(id: string) { setDraft(previous => `${previous}${previous ? " " : ""}@${id[0].toUpperCase()}${id.slice(1)} `); composer.current?.focus(); }
   async function reloadAgents() {
     const { data, error } = await browserDb().from("agents").select("*");
     if (error) throw new Error("Your change was saved, but the friend list could not refresh. Reopen the group.");
@@ -141,6 +140,6 @@ export function useChat() {
   }
   const visibleFriends = agents.length ? agents.filter(a => !a.archived && (!a.room_id || a.room_id === roomId)) : friends;
   const roomAgents = agents.filter(a => !a.archived && (!a.room_id || a.room_id === roomId));
-  return { userId, rooms, roomId, setRoomId, members, messages, name, setName, roomName, setRoomName, invite, setInvite, showCreate, setShowCreate, showPeople, setShowPeople, draft, setDraft, error, setError, busy, sending, retry, setRetry, connection, loading, hasOlder, copied, now, bottom, composer, activeRoom, selectRoom, enterRoom, copyInvite, send, older, mention, visibleFriends, roomAgents, reloadAgents };
+  return { userId, rooms, roomId, setRoomId, members, messages, name, setName, roomName, setRoomName, invite, setInvite, showCreate, setShowCreate, draft, setDraft, error, setError, busy, sending, retry, setRetry, connection, loading, hasOlder, copied, now, bottom, composer, activeRoom, selectRoom, enterRoom, copyInvite, send, older, mention, visibleFriends, roomAgents, reloadAgents };
 }
 

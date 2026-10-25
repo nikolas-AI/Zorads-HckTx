@@ -98,3 +98,23 @@ Run `npm run dev` to preview. Use `npm run typecheck` and `npm test` for code ve
 ## Joining through an invitation
 
 Both QR codes and invite links open `/chat/join`, a dedicated nickname page. The visitor enters a nickname, then **Join chat** validates membership through Supabase and navigates to `/chat?room=...`. Failed joins stay on the nickname page with an error. Existing `/chat#...` and root invitations redirect to the nickname page.
+
+## Group chat visual consistency
+
+The group chat shares the setup screens’ typography tokens: DM Sans, 30px titles, 25px branding, 20px action headings, 16px body, and 14px supporting text. It uses the same `#B8DFE3` aqua background, `#128C9E` teal accent, white surfaces, `#182C30` main text, and `#526B70` muted text. The sidebar uses dark teal `#0D4852`, near-white primary text, muted `#BAD8DC` supporting text, and `#1B6470` for the selected group. Conversation introductions are centered; messages and input text align left. Workspace styling lives in `src/components/chat.css`.
+
+The participants dropdown uses a white background, dark `#182C30` primary text, muted `#526B70` supporting text, and subtle teal accents. The Agent Studio, participants, Invite friends, and Behind the conversation buttons are white with dark teal text/icons by default, and dark teal with white text/icons on hover. Agent Studio uses aqua highlights and teal actions. Participant headings use 14px, names 16px, and the dropdown title 20px, all in DM Sans.
+
+## Analytics panel
+
+Behind the conversation uses a clean `#F7FAFA` drawer with a simple header, subtle dividers, and restrained teal accents. Metrics share one white grid; activity entries use rows rather than separate cards. DM Sans titles are 20px, metric values 23px, body text 14px, and supporting labels 13px. Muted text uses `#526B70`. Analytics data and calculations are unchanged.
+
+## Chat hierarchy and alignment
+
+Chat uses 30px conversation titles, 20px panel/group headings, 16px body text, 14px section labels and action labels, and 13px supporting text. Headings use weight 600, body text 400–500, and compact line heights for headings. Header actions sit in a single flex group with 8px gaps and matching 42px heights; all action icons are 18px. On mobile, actions use compact icon buttons. Participant rows align avatars, names, and badges along a common center line. Header and section spacing follows an 8px-based rhythm.
+
+## Balanced conversation layout
+
+The workspace uses a 260px desktop sidebar and a shared 768px conversation/composer rail with equal 24px outer gutters (16px on mobile). Header actions are 40px high with consistent 18px icons. Sidebar rows are compact, use 14px labels, and omit repeated subtitles and promotional content. The profile stays at the bottom. Messages and the composer share the same left and right edges; empty-state suggestions follow a consistent grid. Light aqua/teal and neutral black dark themes retain this geometry.
+
+The activity drawer matches Settings: 20px title, 14px section headings, 14px body, 13px supporting text, and 24px outer padding. Overview and Recent activity divide the content. Estimation methodology is expandable to reduce visual clutter. Its white light-mode surface becomes charcoal in dark mode using drawer-local color variables.
