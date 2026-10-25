@@ -1,6 +1,6 @@
 # AI Friends
 
-Phase 1: Next.js + Supabase Auth/Postgres/Realtime + server-side Gemini. Requires Node 22+ (Node 24 recommended).
+Phases 1–2: Next.js + Supabase Auth/Postgres/Realtime + server-side Gemini, conversational routing, and activity estimates. Requires Node 22+ (Node 24 recommended).
 
 ## Run
 
@@ -25,11 +25,11 @@ Keep `.env.local` on the server, outside the image. Allow requests at least 60 s
 
 ## Phase 1 boundaries
 
-Room membership gates reads; invite tokens are separate from room IDs and are shared in URL fragments. Members can share invites. All writes use authorized database functions or the server. Submission IDs deduplicate retries; a database compare-and-set allows only one AI execution. Messages are limited to 30/user/minute, AI requests to 12/room/minute, room creation to 10/user/hour. AI calls remain outside database transactions.
+Room membership gates reads; invite tokens are separate from room IDs and are shared in URL fragments. Members can share invites. All writes use authorized database functions or the server. Submission IDs deduplicate retries; a database compare-and-set allows only one AI execution. Messages are limited to 30/user/minute, AI requests to 12/room/minute, room creation to 10/user/hour. AI calls remain outside database transactions. See Phase 2 below for the current conversational trigger rules.
 
 Realtime reconnects trigger a fresh read; a 15-second reconciliation poll covers dropped events. History loads 100 messages at a time. Agent failures are persisted; interrupted server executions become visibly stale after 90 seconds. Send a new mention to retry an interrupted AI call; automatic generation retries are intentionally disabled to avoid duplicate charges. Refresh/reconnect never launches inference.
 
-Advanced routing, fallback models, costs, Think Harder, images, tools, custom agents and persistent memory are deferred until the live two-device Phase 1 check passes. Ravi explicitly has no live web search yet. No AI responses are mocked in the app.
+Phase 2 adds routing, optional fallback models, activity/cost estimates and conversational escalation. Images, tools, custom agents and persistent memory remain deferred. Ravi explicitly has no live web search yet. No AI responses are mocked in the app.
 
 API references: [Gemini generateContent](https://ai.google.dev/api/generate-content), [Supabase anonymous auth](https://supabase.com/docs/guides/auth/auth-anonymous), [Realtime Postgres changes](https://supabase.com/docs/guides/realtime/postgres-changes).
 
@@ -46,3 +46,28 @@ docker compose logs --tail=50 app caddy
 ```
 
 Use `config --quiet` rather than printing the resolved configuration, which contains secrets. Visit `https://` followed by your configured domain. After changing public Supabase configuration, rebuild with the same `up -d --build` command. Do not use `down -v` during updates, because that removes the persistent certificate volumes. The Compose deployment needs Docker Engine and the Compose plugin; its live validation must be performed on the VM.
+
+## Phase 2: conversational depth and activity
+
+Apply `supabase/migrations/002_conversational_routing.sql` **once, before deploying this version**. It is additive and preserves existing chat history. No need to rerun migration 001. Update the server environment using the Phase 2 entries in `.env.example`, then rebuild the app container.
+
+Friends respond to explicit mentions and direct address (for example, `Ravi, can you compare these?`). A direct name that matches a human participant is left for the human; use `@Ravi` to disambiguate. A short unnamed follow-up is accepted only immediately after the same user's AI exchange, within ten minutes. Intervening human messages keep the AI quiet. A named friend asks for clarification when a follow-up lacks an identifiable earlier reply. These are deterministic English-language heuristics, not a general conversation-understanding classifier.
+
+Requests such as `Ravi, dig deeper into that` or `Paul, that's too generic` reuse the earlier answer and original question, select a stronger configured tier when available, and produce a new message. No escalation button or model details appear in chat. Original replies stay intact. Highest-tier or single-model setups can refine an answer without claiming an upgrade.
+
+Model defaults are Gemini 3.5 Flash-Lite (low), 3.8 Flash (medium), and 4 Argon (high). Configure accessible model IDs per project; set a tier to `disabled` if unavailable. Argon requires paid-tier access. A single optional `GEMINI_FALLBACK_MODEL` must match a registered model; fallback only occurs on definite 404/429/503 rejections. Network timeouts never auto-retry because usage may already have been incurred. See https://ai.google.dev/gemini-api/docs/models and https://ai.google.dev/gemini-api/docs/pricing for current model access and rates.
+
+The activity drawer shows the latest 100 attempts, grouped request count, model/agent/complexity distribution, latency, and estimated costs. Price variables are USD per million tokens and are unset by default. Prices are snapshotted per attempt. Output usage includes reported thinking tokens. Estimates use standard text-token rates; they are not billing statements and do not apply caching discounts. Unknown usage (including failed/timeout attempts) remains unknown, not zero. Known-cost subtotals are labeled; aggregate savings are hidden when any attempt in the window lacks comparable usage/pricing. Baseline applies the same tokens to the configured reference model (highest configured tier by default); it is a pricing comparison, not a quality-equivalent benchmark. No paid classification or tools are used in Phase 2.
+
+The server persists routing with the original human request and claims the AI reply atomically. Retries reuse the saved routing. Each inference attempt is logged before the provider call; usage and the final visible reply are saved in one database transaction afterward. Interrupted workers remain visibly interrupted/unknown rather than being silently re-executed.
+
+
+## Agent Studio
+
+Apply `supabase/migrations/003_agent_studio.sql` after migrations 001 and 002, then deploy this version. No new environment variables or external services are required.
+
+Open a group and choose **Agent Studio**. Members can create a friend with a unique name, avatar, personality, interests, and optional instructions. The friend is immediately part of that group; use `@Name` or address them by name. Model selection and follow-ups use Phase 2 routing. Only the creator can edit/remove a custom friend. Removal preserves existing messages and activity. Up to 10 active custom friends per group, and 50 created friends per user. Names use 2–24 ASCII letters/numbers/underscores/hyphens, starting with a letter, to keep mentions unambiguous.
+
+This first version keeps friends within their group and model selection automatic. Cross-group libraries, web search, shared memory, and model preference controls are not included. Ownership uses the current anonymous Supabase identity, so clearing browser storage loses access to creator controls.
+
+Validation: 18 automated tests including PostgreSQL migration/RLS, ownership, cross-room routing, removal/history preservation, and custom persona orchestration; TypeScript and production build. Browser checked Studio form/preview/close. Live custom creation and Gemini replies still require migration 003 on Supabase. Phase 2 timeout behavior is unchanged.

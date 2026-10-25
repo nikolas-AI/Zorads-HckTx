@@ -1,0 +1,54 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { routeMessage, classifyComplexity } from '../src/lib/routing';
+import { modelRegistry, selectModel, estimateCost } from '../src/lib/models';
+import { activitySummary, type Attempt } from '../src/lib/activity';
+import type { Message } from '../src/lib/types';
+const user='u1';
+const human:Message={id:'q',room_id:'room',user_id:user,sender_name:'Sam',agent_id:null,content:'@Ravi compare cabins',status:'complete',created_at:new Date().toISOString(),parent_id:null};
+const reply:Message={...human,id:'a',user_id:null,sender_name:'Ravi',agent_id:'ravi',parent_id:'q',content:'Cabins have beds.'};
+test('natural names, follow-ups, ambiguity and ordinary human conversation',()=>{
+ const history=[human,reply];
+ assert.equal(routeMessage('Ravi, can you dig deeper into that?',history,user).escalate,true);
+ assert.equal(routeMessage('can you dig deeper into that?',history,user).replyToId,'a');
+ assert.equal(routeMessage('can you dig deeper into that?',[reply,human],user).replyToId,'a');
+ assert.equal(routeMessage('Ravi, rethink that',[{...reply,id:'a1',parent_id:'unknown1'},{...reply,id:'a2',parent_id:'unknown2'}],user).clarify,true);
+ assert.equal(routeMessage('Paul, what should we cook?',[],user).agentId,'paul');
+ assert.equal(routeMessage('Kaira rethink the plan with a smaller budget',[human,{...reply,agent_id:'kaira'}],user).escalate,true);
+ assert.equal(routeMessage('Ravi, explain that',[],user).clarify,true);
+ assert.equal(routeMessage('what about a cheaper cabin?',history,user).escalate,false);
+ assert.equal(routeMessage('LOL that is crazy',history,user).agentId,null);
+ assert.equal(routeMessage('can you dig deeper?',history,'other-user').agentId,null);
+ assert.equal(routeMessage('can you dig deeper?',[...history,{...human,id:'interrupt',content:'Dinner anyone?'}],user).agentId,null);
+ assert.equal(routeMessage('can you dig deeper?',[human,{...reply,status:'generating'}],user).agentId,null);
+ assert.equal(routeMessage('can you dig deeper?',history,user,[],Date.now()+11*60_000).agentId,null);
+ assert.equal(routeMessage('Paul, can you help?',[],user,['Paul']).agentId,null);
+ assert.equal(routeMessage('@Paul can you help?',[],user,['Paul']).agentId,'paul');
+});
+test('complexity and escalation respect configured tiers and model availability',()=>{
+ const models=modelRegistry({});
+ assert.equal(classifyComplexity('what should I wear?'),'LOW');
+ assert.equal(classifyComplexity('compare three options'),'MEDIUM');
+ assert.equal(classifyComplexity('give evidence and trade-offs'),'HIGH');
+ assert.equal(selectModel(models,'MEDIUM').rank,1);
+ assert.equal(selectModel(models,'LOW',models[0].id,true).rank,1);
+ assert.equal(selectModel(models,'LOW',models[1].id,true).rank,2);
+ assert.equal(selectModel(models,'HIGH',models[2].id,true).rank,2);
+ const limited=modelRegistry({GEMINI_MODEL_MEDIUM:'disabled',GEMINI_MODEL_HIGH:'disabled'});
+ assert.equal(selectModel(limited,'HIGH').rank,0);
+ assert.equal(modelRegistry({GEMINI_MODEL_MEDIUM:models[0].id}).length,2);
+ assert.throws(()=>selectModel([],'LOW'),/No text model/);
+});
+test('costs require explicit finite prices and measured tokens; include every attempt',()=>{
+ const models=modelRegistry({GEMINI_LOW_INPUT_USD_PER_MILLION:'0.3',GEMINI_LOW_OUTPUT_USD_PER_MILLION:'2.5'});
+ assert.equal(estimateCost(models[0],1000000,1000000),2.8);
+ assert.equal(estimateCost(models[1],100,100),null);
+ assert.equal(estimateCost(models[0],null,100),null);
+ assert.equal(modelRegistry({GEMINI_LOW_INPUT_USD_PER_MILLION:'-1'})[0].inputPrice,null);
+ assert.equal(modelRegistry({GEMINI_LOW_INPUT_USD_PER_MILLION:'Infinity'})[0].inputPrice,null);
+ const attempt={reply_id:'one',model:'low',agent_id:'ravi',complexity:'LOW',estimated_cost:0.01,baseline_cost:0.03,latency_ms:1000} as Attempt;
+ const metrics=activitySummary([attempt,{...attempt,model:'fallback',estimated_cost:null,baseline_cost:null}]);
+ assert.equal(metrics.requests,1);assert.equal(metrics.cost,.01);assert.equal(metrics.unknown,1);assert.equal(metrics.savings,null);
+ assert.ok(Math.abs(activitySummary([attempt]).savings!-.02)<1e-10);
+});
+

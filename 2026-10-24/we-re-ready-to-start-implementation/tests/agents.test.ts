@@ -21,10 +21,10 @@ test('Gemini adapter sends server key, personality and context, reads usage and 
    const body=JSON.parse(init?.body as string);
    assert.equal(body.systemInstruction.parts[0].text,'Be Paul');
    assert.equal(body.contents[0].parts[0].text,'Group context');
-   return Response.json({candidates:[{content:{parts:[{text:'private thought',thought:true},{text:'Try white sneakers.'}]}}],usageMetadata:{promptTokenCount:20,candidatesTokenCount:5}});
+   return Response.json({candidates:[{content:{parts:[{text:'private thought',thought:true},{text:'Try white sneakers.'}]}}],usageMetadata:{promptTokenCount:20,candidatesTokenCount:5,thoughtsTokenCount:7}});
   };
   const result=await new GeminiProvider().generate('Be Paul','Group context');
-  assert.equal(result.text,'Try white sneakers.'); assert.equal(result.inputTokens,20);assert.equal(result.outputTokens,5);
+  assert.equal(result.text,'Try white sneakers.'); assert.equal(result.inputTokens,20);assert.equal(result.outputTokens,12);
   global.fetch=async()=>new Response('',{status:429});
   await assert.rejects(new GeminiProvider().generate('',''),/busy/);
   global.fetch=async()=>Response.json({candidates:[]});
@@ -33,3 +33,4 @@ test('Gemini adapter sends server key, personality and context, reads usage and 
   await assert.rejects(new GeminiProvider().generate('',''),/not configured/);
  } finally {global.fetch=original;if(key)process.env.GEMINI_API_KEY=key;else delete process.env.GEMINI_API_KEY;}
 });
+
