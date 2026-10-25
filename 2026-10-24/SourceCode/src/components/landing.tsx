@@ -94,7 +94,7 @@ export default function Landing({ embedded = false }: { embedded?: boolean }) {
       <div className="landing-brand" aria-label="AImigos"><BrandLogo /><span>AImigos</span></div>
       <section className="landing-welcome">
       <p className="landing-eyebrow">A LITTLE SPACE FOR YOUR PEOPLE</p>
-      <h1>Good company starts here.</h1>
+      <h1>Bring your companions together</h1>
       <p>Create a group, bring your people, and make it your own.</p>
       <div className="landing-actions">
         <Link className="landing-action landing-create" href="/chat/create"><span className="landing-action-icon"><Plus size={28} strokeWidth={1.6} /></span><span className="landing-action-label">Create a group</span></Link>
