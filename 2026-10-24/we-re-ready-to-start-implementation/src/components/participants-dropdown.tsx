@@ -10,10 +10,11 @@ type Props = {
   members: Member[];
   userId: string;
   onMention: (name: string) => void;
+  onProfile: (id: string) => void;
 };
 
 // Owns participant presentation and dismissal; room data stays in useChat.
-export default function ParticipantsDropdown({ friends, members, userId, onMention }: Props) {
+export default function ParticipantsDropdown({ friends, members, userId, onMention, onProfile }: Props) {
   const id = useId();
   const popup = useRef<HTMLDivElement>(null);
 
@@ -24,11 +25,11 @@ export default function ParticipantsDropdown({ friends, members, userId, onMenti
       <section aria-labelledby={`${id}-ai`}>
         <h3 id={`${id}-ai`}><Bot size={16} />YOUR AI FRIENDS · {friends.length}</h3>
         <ul>
-          {friends.map(friend => <li key={friend.id}><button className="participant-row" onClick={() => { onMention(friend.name); popup.current?.hidePopover(); }}>
+          {friends.map(friend => <li key={friend.id}><button className="participant-row" onClick={() => { onProfile(friend.id); popup.current?.hidePopover(); }}>
             <span className="participant-avatar participant-ai">{friend.avatar}</span>
             <span className="participant-name">{friend.name}<small>{friend.specialty}</small></span>
             <span className="participant-badge">AI</span>
-          </button></li>)}
+          </button><button className="participant-mention" aria-label={`Mention ${friend.name}`} onClick={()=>{onMention(friend.name);popup.current?.hidePopover();}}>Mention @{friend.name}</button></li>)}
         </ul>
         {!friends.length && <p className="participants-empty">No AI friends in this group yet.</p>}
       </section>

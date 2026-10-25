@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { serverDb } from '@/lib/server-db';
-import { routeMessage } from '@/lib/routing';
+import { routeRoomMessage } from '@/lib/routing';
 import { generateReply } from '@/lib/orchestrator';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -25,10 +25,12 @@ export async function POST(request: Request) {
     const [{ data: history, error: historyError }, { data: people, error: peopleError }, { data: agents, error: agentsError }] = await Promise.all([
       db.from('messages').select('*').eq('room_id', roomId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(40),
       db.from('members').select('display_name').eq('room_id', roomId),
-      db.from('agents').select('id,name').eq('archived', false).or(`room_id.is.null,room_id.eq.${roomId}`)
+      db.rpc('room_friends', { p_room: roomId })
     ]);
     if (historyError || peopleError || agentsError) throw new Error('Could not read conversation');
-    const route = routeMessage(content, (history || []).reverse(), user.id, (people || []).map(p=>p.display_name), Date.now(), agents || []);
+    const { data: room, error: roomError } = await db.from('rooms').select('ai_only').eq('id', roomId).single();
+    if (roomError) throw new Error('Room not found');
+    const route = routeRoomMessage(content, history || [], user.id, (people || []).map(p=>p.display_name), agents || [], room.ai_only);
     const admin = serverDb();
     const { error } = await admin.rpc('submit_routed_message', { p_id: id, p_room: roomId, p_user: user.id, p_content: content, p_routing: route });
     if (error) return NextResponse.json({ error: error.code === 'PGRST202' ? 'Apply the Phase 2 database migration before using this version.' : error.message }, { status: 400 });
@@ -41,4 +43,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unable to finish sending. Retry safely using the same message.' }, { status: 503 });
   }
 }
-

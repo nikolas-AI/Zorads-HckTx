@@ -75,3 +75,12 @@ test('custom friend profile reaches real orchestration as lower-trust customizat
  }});
  assert.equal(called,true);assert.equal(tables.ai_attempts[0].agent_id,'custom-1');assert.equal(tables.messages.at(-1)!.status,'complete');
 });
+test('one reusable friend never receives another group’s context or selected skills',async()=>{
+ const {admin,tables}=fakeDb(request,[{...request,id:'foreign',room_id:'private-other-group',content:'FOREIGN_PRIVATE_MESSAGE'}]);
+ tables.agents[0]={...tables.agents[0],room_id:'room',owner_id:'owner',name:'Ravi',personality:'Friendly',specialty:'Code',skills:['code-review']};
+ await generateReply(admin,request,{generate:async(system,context)=>{
+  assert.doesNotMatch(context,/FOREIGN_PRIVATE_MESSAGE/);assert.match(system,/Review code provided in this chat/);assert.match(system,/cannot access repositories/);
+  return {text:'Share your code here.',model:'test',inputTokens:3,outputTokens:4};
+ }});
+ assert.equal(tables.messages.at(-1)!.status,'complete');
+});

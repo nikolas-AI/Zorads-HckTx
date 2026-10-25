@@ -1,0 +1,90 @@
+import {routeRoomMessage} from '../src/lib/routing';
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {PGlite} from '@electric-sql/pglite';
+import {templates,skills,skillInstructions} from '../src/lib/friend-presets';
+const owner='11111111-1111-4111-8111-111111111111',member='22222222-2222-4222-8222-222222222222',outsider='44444444-4444-4444-8444-444444444444';
+const config={...templates[0].config,name:'Orbit'};
+test('presets use real supported skills and never promise browsing or execution',()=>{
+ for(const t of templates){assert.ok(t.config.skills.length<=6);for(const id of t.config.skills)assert.ok(skills.some(s=>s.id===id));}
+ assert.match(skillInstructions(['code-review','data-analysis']),/cannot execute code/);
+ assert.match(skillInstructions(['research']),/Do not invent citations/);
+ assert.equal(skillInstructions(['web-search']), '');
+});
+test('library originals, group variants, permissions, templates, private chats, and migration preservation',async()=>{
+ const db=new PGlite();
+ try{
+ await db.exec(`create role anon; create role authenticated; create role service_role bypassrls; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth,public to authenticated,anon,service_role; grant execute on function auth.uid() to authenticated,anon,service_role; create publication supabase_realtime; insert into auth.users values('${owner}'),('${member}'),('${outsider}');`);
+ const asUser=async(id:string)=>db.exec(`reset role;set role authenticated;select set_config('request.jwt.claim.sub','${id}',false);`);
+ const save=async(id:string|null,source:string|null,form:typeof config=config)=>(await db.query<{id:string}>('select public.save_studio_friend($1,$2,$3) id',[id,source,JSON.stringify(form)])).rows[0].id;
+ const add=async(friend:string,room:string)=>(await db.query<{id:string}>('select public.add_friend_to_room($1,$2) id',[friend,room])).rows[0].id;
+ const roster=async(room:string)=>(await db.query<{id:string}>('select id from public.room_friends($1)',[room])).rows.map(a=>a.id);
+ for(const file of ['001_phase1.sql','002_conversational_routing.sql','003_agent_studio.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
+ await asUser(owner);
+ const r1=(await db.query<{id:string}>("select public.create_room('Friends','Alex') id")).rows[0].id;
+ const r2=(await db.query<{id:string}>("select public.create_room('Work','Alex') id")).rows[0].id;
+ const legacy=(await db.query<{id:string}>("select public.save_friend($1,null,'Legacy','Calm','Books','✦','Be helpful') id",[r1])).rows[0].id;
+ await db.exec('reset role;');await db.exec(await readFile('supabase/migrations/004_friend_library.sql','utf8'));
+ await asUser(owner);
+ assert.equal((await db.query('select * from public.agents where id=$1',['library-'+legacy])).rows.length,1);
+ assert.ok((await roster(r1)).includes(legacy));
+ const original=await save(null,null);
+ const a1=await add(original,r1),a2=await add(original,r2);
+ assert.notEqual(a1,a2);assert.notEqual(a1,original);assert.equal(await add(original,r1),a1);
+ assert.ok(!(await roster(r1)).includes(original));assert.ok(!(await roster(r2)).includes(a1));
+ await assert.rejects(save(null,null,{...config,skills:['web-search']}),/available skills/);
+ await assert.rejects(add(await save(null,null),r1),/already uses/);
+ await db.exec(`reset role;insert into public.members values('${r1}','${member}','Jo');`);
+ await asUser(member);
+ assert.equal((await db.query('select * from public.agents where id=$1',[original])).rows.length,0);
+ assert.equal((await db.query('select * from public.agents where id=$1',[a2])).rows.length,0);
+ await assert.rejects(save(original,null),/Only the creator/);
+ await assert.rejects(save(a1,null),/not allowed group edits/);
+ await assert.rejects(save(null,a1),/not allowed template/);
+ await assert.rejects(add(original,r1),/own library/);
+ await assert.rejects(db.query("update public.agents set allow_template=true where id=$1",[a1]),/permission denied/);
+ await asUser(owner);await save(original,null,{...config,allow_template:true,allow_group_edit:true});
+ await asUser(member);
+ await save(a1,null,{...config,personality:'Group-only personality',allow_template:false,allow_group_edit:false});
+ const fork=await save(null,a1,{...config,name:'MyOrbit'});
+ const forkRow=(await db.query<{owner_id:string;room_id:string|null;source_id:string|null}>('select * from public.agents where id=$1',[fork])).rows[0];
+ assert.equal(forkRow.owner_id,member);assert.equal(forkRow.room_id,null);assert.equal(forkRow.source_id,null);
+ await asUser(owner);
+ assert.equal((await db.query<{personality:string}>('select personality from public.agents where id=$1',[original])).rows[0].personality,config.personality);
+ assert.equal((await db.query<{personality:string}>('select personality from public.agents where id=$1',[a2])).rows[0].personality,config.personality);
+ assert.equal((await db.query<{allow_template:boolean}>('select allow_template from public.agents where id=$1',[a1])).rows[0].allow_template,true);
+ await save(original,null,{...config,allow_template:false,allow_group_edit:false});
+ await asUser(member);await assert.rejects(save(a1,null),/not allowed group edits/);await assert.rejects(save(null,a1),/not allowed template/);
+ // Already-created independent forks remain owned by their creator after revocation.
+ await save(fork,null,{...config,name:'MyOrbit'});
+ await asUser(outsider);assert.deepEqual(await roster(r1),[]);await assert.rejects(save(null,a1),/not available/);
+ await asUser(owner);
+ const solo=(await db.query<{id:string}>('select public.start_friend_chat($1,$2) id',[[original],'Alex'])).rows[0].id;
+ assert.equal((await roster(solo)).length,1);assert.ok(!(await roster(solo)).includes('ravi'));
+ await assert.rejects(db.query('select public.room_invite($1)',[solo]),/private AI chats/);
+ const another=await save(null,null,{...config,name:'Luna'});
+ const circle=(await db.query<{id:string}>('select public.start_friend_chat($1,$2) id',[[original,another],'Alex'])).rows[0].id;
+ assert.equal((await roster(circle)).length,2);
+ await db.exec('reset role;');
+ const secret=(await db.query<{invite_token:string}>('select invite_token from public.rooms where id=$1',[solo])).rows[0].invite_token;
+ await asUser(member);await assert.rejects(db.query('select public.join_room($1,$2,$3)',[solo,secret,'Jo']),/invalid/);
+ await db.exec('reset role;set role service_role;');
+ const route=(agentId:string)=>JSON.stringify({agentId,complexity:'LOW',replyToId:null});
+ await assert.rejects(db.query("select public.submit_routed_message(gen_random_uuid(),$1,$2,'Hi',$3)",[r1,owner,route(original)]),/not available/);
+ await assert.rejects(db.query("select public.submit_routed_message(gen_random_uuid(),$1,$2,'Hi',$3)",[solo,owner,route('ravi')]),/not available/);
+ await db.query("select public.submit_routed_message(gen_random_uuid(),$1,$2,'Private room context',$3)",[r2,owner,route(a2)]);
+ await asUser(member);assert.equal((await db.query('select * from public.messages where room_id=$1',[r2])).rows.length,0);
+ await assert.rejects(db.query("select public.save_friend($1,null,'OldAPI','Nice','Stuff','x','')",[r1]),/permission denied/);
+ await asUser(owner);const copy=(await save(null,'ravi',{...config,name:'MyRavi'}));assert.ok(copy);
+ await db.exec('reset role;set role anon;');await assert.rejects(save(null,null),/permission denied/);
+ }finally{await db.close();}
+});
+
+test('private one-to-one chats need no mention while multi-agent and human groups stay quiet',()=>{
+ const roster=[{id:'custom-one',name:'Orbit'}];
+ assert.equal(routeRoomMessage('Hello',[],owner,[],roster,true).agentId,'custom-one');
+ assert.equal(routeRoomMessage('Hello',[],owner,[],roster,false).agentId,null);
+ assert.equal(routeRoomMessage('Hello',[],owner,[],[...roster,{id:'custom-two',name:'Luna'}],true).agentId,null);
+ assert.equal(routeRoomMessage('@Luna hello',[],owner,[],[...roster,{id:'custom-two',name:'Luna'}],true).agentId,'custom-two');
+});

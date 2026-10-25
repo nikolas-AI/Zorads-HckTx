@@ -40,3 +40,9 @@ export function routeMessage(content: string, history: Message[], userId: string
 
 
 
+
+// A private chat with one AI has an unambiguous addressee; groups still require an invitation.
+export function routeRoomMessage(content:string, history:Message[], userId:string, humanNames:string[], agents:{id:string;name:string}[], aiOnly:boolean, now=Date.now()) {
+ const route=routeMessage(content,history,userId,humanNames,now,agents);
+ return aiOnly && agents.length===1 && !route.agentId ? routeMessage(`@${agents[0].name} ${content}`,history,userId,humanNames,now,agents) : route;
+}

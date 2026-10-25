@@ -37,7 +37,7 @@ export function useChat() {
   currentRoom.current = roomId;
   const activeRoom = rooms.find(r => r.id === roomId);
   const loadRooms = async () => {
-    const { data, error } = await browserDb().from("rooms").select("id,name,created_at").order("created_at", { ascending: false });
+    const { data, error } = await browserDb().from("rooms").select("id,name,created_at,ai_only").order("created_at", { ascending: false });
     if (error) throw new Error("Could not load rooms. Check the database migration and connection.");
     setRooms(data || []);
     return data || [];
@@ -59,9 +59,6 @@ export function useChat() {
         const requested = new URLSearchParams(window.location.search).get("room");
         if (!alive) return;
         if (!hash.has("invite")) setRoomId(all.find(r => r.id === requested)?.id || all[0]?.id || "");
-        const { data, error } = await browserDb().from("agents").select("*");
-        if (error) throw new Error("Could not load AI friends. Apply the database migration.");
-        if (alive) setAgents(data || []);
       } catch (e) { if (alive) setError(e instanceof Error ? e.message : "Could not connect."); }
     })();
     return () => { alive = false; };
@@ -69,12 +66,12 @@ export function useChat() {
   useEffect(() => {
     if (!roomId || !userId) return;
     const db = browserDb(); let alive = true;
-    setMessages([]); setMembers([]); setLoading(true); setConnection("Connecting");
+    setMessages([]); setMembers([]); setAgents([]); setLoading(true); setConnection("Connecting");
     const sync = async () => {
       const [chat, people, roster] = await Promise.all([
         db.from("messages").select("*").eq("room_id", roomId).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(100),
         db.from("members").select("user_id,display_name").eq("room_id", roomId),
-        db.from("agents").select("*")
+        db.rpc("room_friends", { p_room: roomId })
       ]);
       if (!alive) return;
       if (chat.error || people.error || roster.error) { setError("Could not sync this room. Reconnecting automatically."); setLoading(false); return; }
@@ -134,12 +131,11 @@ export function useChat() {
   }
   function mention(id: string) { setDraft(previous => `${previous}${previous ? " " : ""}@${id[0].toUpperCase()}${id.slice(1)} `); composer.current?.focus(); }
   async function reloadAgents() {
-    const { data, error } = await browserDb().from("agents").select("*");
+    const { data, error } = await browserDb().rpc("room_friends", { p_room: roomId });
     if (error) throw new Error("Your change was saved, but the friend list could not refresh. Reopen the group.");
     setAgents(data || []);
   }
-  const visibleFriends = agents.length ? agents.filter(a => !a.archived && (!a.room_id || a.room_id === roomId)) : friends;
+  const visibleFriends = agents.length ? agents : activeRoom?.ai_only ? [] : friends;
   const roomAgents = agents.filter(a => !a.archived && (!a.room_id || a.room_id === roomId));
   return { userId, rooms, roomId, setRoomId, members, messages, name, setName, roomName, setRoomName, invite, setInvite, showCreate, setShowCreate, draft, setDraft, error, setError, busy, sending, retry, setRetry, connection, loading, hasOlder, copied, now, bottom, composer, activeRoom, selectRoom, enterRoom, copyInvite, send, older, mention, visibleFriends, roomAgents, reloadAgents };
 }
-

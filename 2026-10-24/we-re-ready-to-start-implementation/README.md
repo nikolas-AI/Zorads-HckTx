@@ -29,7 +29,7 @@ Room membership gates reads; invite tokens are separate from room IDs and are sh
 
 Realtime reconnects trigger a fresh read; a 15-second reconciliation poll covers dropped events. History loads 100 messages at a time. Agent failures are persisted; interrupted server executions become visibly stale after 90 seconds. Send a new mention to retry an interrupted AI call; automatic generation retries are intentionally disabled to avoid duplicate charges. Refresh/reconnect never launches inference.
 
-Phase 2 adds routing, optional fallback models, activity/cost estimates and conversational escalation. Images, tools, custom agents and persistent memory remain deferred. Ravi explicitly has no live web search yet. No AI responses are mocked in the app.
+Phase 2 adds routing, optional fallback models, activity/cost estimates and conversational escalation. Images, tools and persistent memory remain deferred. Ravi explicitly has no live web search yet. No AI responses are mocked in the app.
 
 API references: [Gemini generateContent](https://ai.google.dev/api/generate-content), [Supabase anonymous auth](https://supabase.com/docs/guides/auth/auth-anonymous), [Realtime Postgres changes](https://supabase.com/docs/guides/realtime/postgres-changes).
 
@@ -62,12 +62,16 @@ The activity drawer shows the latest 100 attempts, grouped request count, model/
 The server persists routing with the original human request and claims the AI reply atomically. Retries reuse the saved routing. Each inference attempt is logged before the provider call; usage and the final visible reply are saved in one database transaction afterward. Interrupted workers remain visibly interrupted/unknown rather than being silently re-executed.
 
 
-## Agent Studio
+## Create an AI friend — prototype Studio
 
-Apply `supabase/migrations/003_agent_studio.sql` after migrations 001 and 002, then deploy this version. No new environment variables or external services are required.
+Apply migrations 001–004 in order. For an existing Phase 3 installation, run **only** `supabase/migrations/004_friend_library.sql`, once, before deploying this build. It preserves old room friends/messages and creates library originals for their owners. No new environment variables or external services are required. Deploy migration and app together: old editor RPCs are intentionally disabled to enforce the new permissions.
 
-Open a group and choose **Agent Studio**. Members can create a friend with a unique name, avatar, personality, interests, and optional instructions. The friend is immediately part of that group; use `@Name` or address them by name. Model selection and follow-ups use Phase 2 routing. Only the creator can edit/remove a custom friend. Removal preserves existing messages and activity. Up to 10 active custom friends per group, and 50 created friends per user. Names use 2–24 ASCII letters/numbers/underscores/hyphens, starting with a letter, to keep mentions unambiguous.
+Open **Create an AI friend** in the profile menu, or `/chat/ai/create`, without joining a chat. Pick one of six templates or start blank. Nine selectable skills guide real Gemini replies; code review/data analysis work on text pasted into chat, not code execution. Web search and scraping are visibly unconnected. Model routing stays automatic.
 
-This first version keeps friends within their group and model selection automatic. Cross-group libraries, web search, shared memory, and model preference controls are not included. Ownership uses the current anonymous Supabase identity, so clearing browser storage loses access to creator controls.
+Your library originals are owner-only. Add an original to multiple groups; each receives its own configuration copy and chat context. Editing an original does not overwrite existing group configurations. Creators can enable group-member customization and template copying; those permissions apply immediately to their existing group copies. Group edits stay in that group. Authorized template copies become independent originals owned by the copier, without messages or memory. Revocation prevents future copying; already-created copies remain independent.
 
-Validation: 18 automated tests including PostgreSQL migration/RLS, ownership, cross-room routing, removal/history preservation, and custom persona orchestration; TypeScript and production build. Browser checked Studio form/preview/close. Live custom creation and Gemini replies still require migration 003 on Supabase. Phase 2 timeout behavior is unchanged.
+Open profiles through library cards, chat participant names, or AI message names. Select one to five friends in the library to start a private chat; no human invitations are allowed. One-to-one replies need no mention. In a multi-agent chat, address the friend you want to hear from. Agents do not autonomously talk to each other.
+
+Privacy uses room-filtered message context, not a cross-chat memory store. Ownership uses the existing anonymous Supabase identity; clearing that browser's storage loses access to creator controls. Limits: 50 library friends/user, 10 active custom friends/group, six skills/friend, and the existing message/inference limits.
+
+Validation: 22 automated tests, including migration preservation, RLS, ownership, permission revocation, group-only edits, template forks, private rooms, routing, and isolated model context. TypeScript and production build pass. Browser checked template prefilling, skill selection/limits and previews. Live save/add/chat still needs migration 004 in Supabase. Phase 2 timeout behavior is unchanged.

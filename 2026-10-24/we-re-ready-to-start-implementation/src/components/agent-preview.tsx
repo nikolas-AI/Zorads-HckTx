@@ -10,7 +10,7 @@ export default function AgentPreview({ name, avatar, specialty, personality }: P
     <p>{specialty || "A little personality. A fresh perspective."}</p>
     <span className="builder-ai-label"><Bot size={14} />AI friend</span>
     <div className="builder-preview-about"><h4>Personality</h4><p>{personality || "Describe how your friend should think, speak, and help."}</p></div>
-    <div className="builder-preview-note"><MessageCircle size={18} /><p>Once created, mention your friend in the group to start a conversation.</p></div>
+    <div className="builder-preview-note"><MessageCircle size={18} /><p>Create your friend, then add them to groups or start a private chat. Each conversation stays separate.</p></div>
     <small>Profile preview · No test message is being generated.</small>
   </aside>;
 }

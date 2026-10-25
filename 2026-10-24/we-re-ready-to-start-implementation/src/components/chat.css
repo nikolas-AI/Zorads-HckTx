@@ -877,3 +877,4 @@ html[data-chat-dark="true"] .builder-ai-label { color: #aaa; }
 html[data-chat-dark="true"] .agent-builder .builder-workspace { scrollbar-color: #555 transparent; }
 
 html[data-chat-dark="true"] .agent-builder .builder-header > button:hover { background: #303030; }
+.participant-mention{font-size:11px;color:#4d8b8e;margin:0 0 10px 50px;padding:4px}.message-meta strong a:hover{text-decoration:underline}
