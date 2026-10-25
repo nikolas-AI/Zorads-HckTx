@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/friends-logo.png" alt="AImigos logo" width="160" />
+  <img src="friends-logo.png" alt="AImigos logo" width="160" />
   <h1>AImigos</h1>
   <p><strong>Your people. Your AI companions. One conversation.</strong></p>
 </div>
