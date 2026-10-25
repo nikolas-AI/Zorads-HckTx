@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowUp, Plus, Users, Link as LinkIcon, X, MessageCircle, Sparkles, ChevronLeft, Check, RefreshCw } from "lucide-react";
+import "./chat.css";
 import CreateAiFriend from "@/components/create-ai-friend";
 import { useChat } from "@/hooks/use-chat";
 import { friends } from "@/lib/friends";
@@ -8,21 +9,21 @@ import { configured } from "@/lib/supabase";
 
 export default function Chat() {
   const { userId, rooms, roomId, setRoomId, members, messages, name, setName, roomName, setRoomName, invite, setInvite, showCreate, setShowCreate, showPeople, setShowPeople, draft, setDraft, error, setError, busy, sending, retry, setRetry, connection, loading, hasOlder, copied, now, bottom, composer, activeRoom, selectRoom, enterRoom, copyInvite, send, older, mention, visibleFriends } = useChat();
-  return <div className={`app ${activeRoom ? "has-room" : ""}`}>
+  return <div className={`app chat-workspace ${activeRoom ? "has-room" : ""}`}>
     <aside className="sidebar">
       <a className="brand" href="/"><span className="brand-icon"><MessageCircle size={23}/></span> friends<span className="brand-dot">.</span></a>
-      <div className="sidebar-caption">GOOD COMPANY, ANYWHERE</div>
+      <a className="chat-new" href="/chat/create"><Plus size={18}/>New group chat</a>
       <div className="section-heading">YOUR GROUPS <button title="Create a group" aria-label="Create a group" onClick={() => setShowCreate(true)} disabled={!userId}><Plus size={18}/></button></div>
       <nav>{rooms.map(room => <button key={room.id} className={`room-item ${room.id === roomId ? "selected" : ""}`} disabled={sending || Boolean(retry)} onClick={() => selectRoom(room.id)}><span className="room-icon">{room.name.slice(0, 1).toUpperCase()}</span><span>{room.name}<small>You + your people + AI</small></span></button>)}</nav>
       {!rooms.length && <p className="muted sidebar-empty">Your next good conversation starts with a group.</p>}
-      <div className="sidebar-bottom"><span className="little-orbit">✳</span><p>More perspectives.<br/><strong>More together.</strong></p><small>AI friends join in when you @mention them.</small></div>
+
       <div className="my-profile"><span className="avatar human">{name.slice(0,1).toUpperCase() || "Y"}</span><div>{name || "You"}<small>Your space to connect</small></div></div>
     </aside>
     <main className="main">
       {activeRoom ? <>
-        <header className="chat-header"><button className="mobile-back" aria-label="Back to groups" disabled={sending || Boolean(retry)} onClick={() => setRoomId("")}><ChevronLeft/></button><div className="room-icon header-icon">{activeRoom.name.slice(0,1).toUpperCase()}</div><div className="header-title"><h1>{activeRoom.name}</h1><p><span className={`status-dot ${connection === "Live" ? "live" : ""}`}/>{connection} <span className="separator">·</span> {members.length} {members.length === 1 ? "person" : "people"} + 3 AI friends</p></div><button className="button invite-button" onClick={copyInvite}>{copied ? <Check size={16}/> : <LinkIcon size={16}/>}<span>{copied ? "Copied!" : "Invite friends"}</span></button><CreateAiFriend key={roomId} room={roomId} /><button className="people-toggle" aria-label="Show participants" onClick={() => setShowPeople(true)}><Users size={20}/></button></header>
+        <header className="chat-header"><button className="mobile-back" aria-label="Back to groups" disabled={sending || Boolean(retry)} onClick={() => setRoomId("")}><ChevronLeft/></button><div className="room-icon header-icon">{activeRoom.name.slice(0,1).toUpperCase()}</div><div className="header-title"><h1>{activeRoom.name}</h1><p><span className={`status-dot ${connection === "Live" ? "live" : ""}`}/>{connection} <span className="separator">·</span> {members.length} {members.length === 1 ? "person" : "people"} + 3 AI friends</p></div><button className="button invite-button" onClick={copyInvite}>{copied ? <Check size={16}/> : <LinkIcon size={16}/>}<span>{copied ? "Copied!" : "Invite friends"}</span></button><CreateAiFriend key={roomId} room={roomId} /><button className="people-toggle" aria-label="Show participants" aria-expanded={showPeople} onClick={() => setShowPeople(!showPeople)}><Users size={20}/></button></header>
         <div className="conversation" role="log" aria-label="Group messages" aria-live="polite">
-          <div className="conversation-intro"><span>THE START OF SOMETHING GOOD</span><h2>Everybody’s here.<br/>Make yourselves at home.</h2><p>Catch up with your people. Bring in a fresh perspective.</p></div>
+          {!messages.length && <div className="conversation-intro"><span>YOUR SPACE, TOGETHER</span><h2>What’s happening today?</h2><p>Say hello to your group, or bring an AI friend into the conversation.</p></div>}
           {hasOlder && <button className="older button" onClick={older}>Load earlier messages</button>}
           {loading && <p className="center muted">Loading your conversation…</p>}
           {!loading && !messages.length && <div className="starters">{["@Paul what should we cook together?", "@Ravi help us compare camping and a cabin", "@Kaira plan a fun Saturday with friends"].map(text => <button key={text} onClick={() => {setDraft(text); composer.current?.focus();}}>{text}<span>↗</span></button>)}</div>}
