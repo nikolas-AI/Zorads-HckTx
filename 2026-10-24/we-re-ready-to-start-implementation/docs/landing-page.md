@@ -45,24 +45,23 @@ The CSS custom properties `--landing-accent` and `--landing-accent-hover` contro
 
 Font: **DM Sans**. Category: **sans-serif**. Fallback: system `sans-serif`. Loaded through the Google Fonts import in `globals.css`.
 
-| Element | Font size | Weight | Letter spacing |
+| Role | CSS token | Font size | Weight / alignment |
 | --- | --- | --- | --- |
-| Brand | 25px | 700 (bold) | -1.1px |
-| Landing action labels | 20px | 600 (semibold) | -0.8px |
-| Join dialog title | 24px | 700 (bold) | -0.7px |
-| Dialog submit button | 16px | 600 (semibold) | Normal |
-| Input | 14px | 400 (regular) | Normal |
-| Form label | 12px | 400 (regular) | Normal |
-| Error message | 13px | 400 (regular) | Normal |
-| Close character | 28px | 400 (regular) | Normal |
+| Create/share page and join dialog titles | `--text-title` | 30px | 700; left on forms, centered on invite screen |
+| Brand | `--text-brand` | 25px | 700 |
+| Buttons, landing labels, Back link | `--text-action` | 20px | 600; Back uses 500 |
+| Body and editable inputs | `--text-body` | 16px | 400; line-height 1.5 |
+| Labels, hints, errors, invite URL and status | `--text-label` | 14px | Labels use 600 where specified |
+
+All these screens use `--font-ui: 'DM Sans', sans-serif`. Form text aligns left; invite headings and QR content align center, with the invite field label left-aligned. Button text centers except the landing cards, which retain left-aligned labels. Headings use line-height 1.2. Back has a 44px minimum hit area and a 20px arrow aligned with its text.
 
 Icons come from `lucide-react`: `MessageCircle` for the brand, `Plus` for create, and `Users` for join. Action icons render at 18px inside 26px containers. The brand icon renders at 22px.
 
 ## Interactions
 
-1. **Create a chat** navigates to `/chat?create=1`, which opens the existing room creation flow.
+1. **Create a chat** navigates to `/chat/create`, a dedicated group naming page. Names accept Unicode letters, numbers, symbols, and emoji, with a 60-code-point limit matching the database. After naming the group, the creator chooses a nickname (up to 32 Unicode code points, including spaces and emoji). Creating a room saves that nickname, then shows an invite screen with a locally generated QR code and a copyable invite URL. Both encode the same membership token. **Enter chat** navigates to `/chat?room=...`. Invite loading can be retried without creating another room. On localhost, other devices need a reachable network or deployed URL to join.
 2. **Join a chat** opens a native modal dialog with an invite URL input and submit button.
-3. A valid HTTP or HTTPS invite contains both `room` and `invite` in its URL fragment. It navigates to `/chat#room=...&invite=...` with values encoded using `URLSearchParams`.
+3. A valid HTTP or HTTPS invite contains both `room` and `invite` in its URL fragment. It navigates to `/chat/join#room=...&invite=...` with values encoded using `URLSearchParams`.
 4. Invalid invitation details show: `Enter a valid chat invite link.` The input also uses native required and URL validation.
 5. The close control or Escape dismisses the native dialog. Reopening clears the displayed error.
 6. Legacy links arriving at `/` with a hash or a `room` query parameter redirect to `/chat`, preserving the query and fragment.
@@ -95,3 +94,7 @@ Chat creation and membership require configured Supabase credentials. The landin
 Keep layout, form behavior, and invitation utilities separate. Change shared accent values through the existing CSS properties, and update this reference alongside visual changes. The existing chat interface has separate styling; this document describes the landing page and its join dialog only.
 
 Run `npm run dev` to preview. Use `npm run typecheck` and `npm test` for code verification; visually inspect desktop and mobile layouts after styling changes.
+
+## Joining through an invitation
+
+Both QR codes and invite links open `/chat/join`, a dedicated nickname page. The visitor enters a nickname, then **Join chat** validates membership through Supabase and navigates to `/chat?room=...`. Failed joins stay on the nickname page with an error. Existing `/chat#...` and root invitations redirect to the nickname page.
