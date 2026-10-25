@@ -24,3 +24,23 @@ test("message synchronization replaces duplicate IDs and keeps stable chronologi
   assert.equal(result[1].content, "updated");
   assert.equal(previous[0].content, "old");
 });
+
+import { validateRoomName } from "../src/lib/room-names";
+
+test("group names accept international letters, numbers, symbols, and emoji", () => {
+  for (const value of ["Weekend 123 !@#$", "साथीहरू ❤️", "朋友 🎉", "🎉".repeat(60)]) {
+    assert.equal(validateRoomName(value), null);
+  }
+  assert.equal(validateRoomName("   "), "Enter a group name.");
+  assert.equal(validateRoomName("🎉".repeat(61)), "Use 60 characters or fewer.");
+});
+
+import { validateNickname } from "../src/lib/nicknames";
+
+test("nicknames preserve spaces and accept Unicode, numbers, symbols, and emoji", () => {
+  for (const name of ["Alex Smith", "साथी 123 ✨", "!@#$", "🎉".repeat(32)]) {
+    assert.equal(validateNickname(name), null);
+  }
+  assert.equal(validateNickname("  "), "Enter your nickname.");
+  assert.equal(validateNickname("🎉".repeat(33)), "Use 32 characters or fewer for your nickname.");
+});
