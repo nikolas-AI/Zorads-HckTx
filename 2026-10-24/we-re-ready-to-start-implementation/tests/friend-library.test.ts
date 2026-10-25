@@ -11,6 +11,8 @@ test('presets use real supported skills and never promise browsing or execution'
  assert.match(skillInstructions(['code-review','data-analysis']),/cannot execute code/);
  assert.match(skillInstructions(['research']),/Do not invent citations/);
  assert.equal(skillInstructions(['web-search']), '');
+ assert.match(skillInstructions(['custom:Explain chess openings','custom:Write poetry']), /Explain chess openings/);
+ assert.match(skillInstructions(['custom:Write poetry']), /Write poetry/);
 });
 test('library originals, group variants, permissions, templates, private chats, and migration preservation',async()=>{
  const db=new PGlite();
@@ -26,11 +28,18 @@ test('library originals, group variants, permissions, templates, private chats, 
  const r2=(await db.query<{id:string}>("select public.create_room('Work','Alex') id")).rows[0].id;
  const legacy=(await db.query<{id:string}>("select public.save_friend($1,null,'Legacy','Calm','Books','✦','Be helpful') id",[r1])).rows[0].id;
  await db.exec('reset role;');await db.exec(await readFile('supabase/migrations/004_friend_library.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/010_custom_skills.sql','utf8'));
  await asUser(owner);
  assert.equal((await db.query('select * from public.agents where id=$1',['library-'+legacy])).rows.length,1);
  assert.ok((await roster(r1)).includes(legacy));
- const original=await save(null,null);
+ const customSkills=['custom:Explain chess openings','custom:Write short poetry'];
+ const original=await save(null,null,{...config,skills:customSkills});
+ assert.deepEqual((await db.query<{skills:string[]}>('select skills from public.agents where id=$1',[original])).rows[0].skills.sort(),customSkills.sort());
+ await assert.rejects(save(null,null,{...config,skills:['custom:']}),/available skills/);
+ await assert.rejects(save(null,null,{...config,skills:['custom:'+ 'x'.repeat(121)]}),/available skills/);
+ await assert.rejects(save(null,null,{...config,skills:Array.from({length:7},(_,i)=>'custom:Skill '+i)}),/available skills/);
  const a1=await add(original,r1),a2=await add(original,r2);
+ assert.deepEqual((await db.query<{skills:string[]}>('select skills from public.agents where id=$1',[a1])).rows[0].skills.sort(),customSkills.sort());
  assert.notEqual(a1,a2);assert.notEqual(a1,original);assert.equal(await add(original,r1),a1);
  assert.ok(!(await roster(r1)).includes(original));assert.ok(!(await roster(r2)).includes(a1));
  await assert.rejects(save(null,null,{...config,skills:['web-search']}),/available skills/);
@@ -77,6 +86,25 @@ test('library originals, group variants, permissions, templates, private chats, 
  await asUser(member);assert.equal((await db.query('select * from public.messages where room_id=$1',[r2])).rows.length,0);
  await assert.rejects(db.query("select public.save_friend($1,null,'OldAPI','Nice','Stuff','x','')",[r1]),/permission denied/);
  await asUser(owner);const copy=(await save(null,'ravi',{...config,name:'MyRavi'}));assert.ok(copy);
+ await db.exec('reset role;');
+ await db.exec(await readFile('supabase/migrations/011_unique_friend_names.sql','utf8'));
+ await asUser(owner);
+ await assert.rejects(save(null,null,{...config,name:' orbit '}),/already have a friend/);
+ await assert.rejects(save(null,'ravi',{...config,name:'ORBIT'}),/already have a friend/);
+ await assert.rejects(save(another,null,{...config,name:'Orbit'}),/already have a friend/);
+ await save(original,null,{...config,personality:'Updated without renaming'});
+ await asUser(outsider);
+ const independent=await save(null,null,{...config,name:'Orbit'});
+ assert.ok(independent);
+ await db.exec('reset role;');await db.exec(await readFile('supabase/migrations/012_delete_library_friend.sql','utf8'));
+ await asUser(member);await assert.rejects(db.query('select public.delete_library_friend($1)',[original]),/Only the creator/);
+ await asUser(owner);await assert.rejects(db.query('select public.delete_library_friend($1)',['ravi']),/Only the creator/);
+ await assert.rejects(db.query('select public.delete_library_friend($1)',[a1]),/Only the creator/);
+ await db.query('select public.delete_library_friend($1)',[original]);
+ assert.equal((await db.query<{archived:boolean}>('select archived from public.agents where id=$1',[original])).rows[0].archived,true);
+ assert.ok((await roster(r1)).includes(a1));
+ await assert.rejects(add(original,r2),/own library/);
+ await assert.rejects(save(null,original,{...config,name:'DeletedCopy'}),/not available/);
  await db.exec('reset role;set role anon;');await assert.rejects(save(null,null),/permission denied/);
  }finally{await db.close();}
 });

@@ -17,3 +17,8 @@ export async function removeFriend(roomId:string,id:string) {
  const {error}=await browserDb().rpc('remove_friend',{p_room:roomId,p_id:id});
  if(error)throw new Error(error.message);
 }
+
+export async function deleteLibraryFriend(id:string) {
+ const {error}=await browserDb().rpc('delete_library_friend',{p_id:id});
+ if(error)throw new Error(error.code==='PGRST202'?'Apply migration 012 to enable deleting friends.':error.message);
+}

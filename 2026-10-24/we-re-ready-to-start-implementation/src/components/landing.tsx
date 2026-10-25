@@ -91,7 +91,7 @@ export default function Landing({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <Container className="landing" aria-label="Chat">
-      <div className="landing-brand" aria-label="friends"><BrandLogo /><span>friends<span className="landing-brand-dot">.</span></span></div>
+      <div className="landing-brand" aria-label="AImigos"><BrandLogo /><span>AImigos</span></div>
       <section className="landing-welcome">
       <p className="landing-eyebrow">A LITTLE SPACE FOR YOUR PEOPLE</p>
       <h1>Good company starts here.</h1>

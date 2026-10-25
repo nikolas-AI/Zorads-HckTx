@@ -5,7 +5,7 @@ import { validateNickname } from "@/lib/nicknames";
 import { identity } from "@/lib/identity";
 import { browserDb, configured } from "@/lib/supabase";
 import { roomInviteLink } from "@/lib/room-invite";
-import { mergeMessages } from "@/lib/messages";
+import { compareMessageCursor, mergeMessages } from "@/lib/messages";
 import { invitePath, parseInvite, type Invite } from "@/lib/invites";
 import type { Agent, Member, Message, Room } from "@/lib/types";
 
@@ -135,7 +135,7 @@ export function useChat() {
     } catch (e) { setError(e instanceof Error ? e.message : "Connection interrupted. Retry your message below."); } finally { setSending(false); composer.current?.focus(); }
   }
   async function older() {
-    const first = messages[0]; if (!first) return;
+    const first = [...messages].sort(compareMessageCursor)[0]; if (!first) return;
     const { data, error } = await browserDb().from("messages").select("*").eq("room_id", roomId).or(`created_at.lt.${first.created_at},and(created_at.eq.${first.created_at},id.lt.${first.id})`).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(100);
     if (currentRoom.current !== roomId) return;
     if (error) { setError("Couldn't load earlier messages."); return; }

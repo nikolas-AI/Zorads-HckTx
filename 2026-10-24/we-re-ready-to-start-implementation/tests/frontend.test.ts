@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { invitePath, parseInvite } from "../src/lib/invites";
-import { mergeMessages } from "../src/lib/messages";
+import { compareMessageCursor, mergeMessages, sortMessages } from "../src/lib/messages";
 import type { Message } from "../src/lib/types";
 
 test("invitations round-trip encoded tokens and support legacy links", () => {
@@ -43,4 +43,22 @@ test("nicknames preserve spaces and accept Unicode, numbers, symbols, and emoji"
   }
   assert.equal(validateNickname("  "), "Enter your nickname.");
   assert.equal(validateNickname("🎉".repeat(33)), "Use 32 characters or fewer for your nickname.");
+});
+
+
+test("tied transaction timestamps always place questions before their replies", () => {
+ const make = (id: string, parent_id: string | null = null): Message => ({id, parent_id, room_id:'room', user_id:parent_id ? null : 'user', sender_name:'Name', agent_id:parent_id ? 'zorad' : null, content:id, status:'complete', created_at:'2026-10-25T01:00:00Z'});
+ const question = make('z'), reply = make('a','z'), other = make('m');
+ for (const input of [[reply,other,question],[question,reply,other],[other,question,reply]]) {
+  assert.deepEqual(sortMessages(input).map(m=>m.id),['m','z','a']);
+ }
+ const pending = {...reply,status:'pending' as const};
+ assert.deepEqual(mergeMessages([question,other],[pending]).map(m=>m.id),['m','z','a']);
+ const completed = mergeMessages([question,pending,other],[reply]);
+ assert.deepEqual(completed.map(m=>m.id),['m','z','a']);
+ assert.equal(completed.at(-1)?.status,'complete');
+ // The display-first message isn't necessarily the oldest database cursor.
+ assert.equal([...completed].sort(compareMessageCursor)[0].id,'a');
+ // A reply arriving on an earlier page is put after its question once loaded.
+ assert.deepEqual(mergeMessages([reply],[question]).map(m=>m.id),['z','a']);
 });

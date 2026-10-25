@@ -36,7 +36,7 @@ export default function CreateChat() {
 
   return (
     <main className="landing">
-      <Link className="landing-brand" href="/" aria-label="friends home"><BrandLogo /><span>friends<span className="landing-brand-dot">.</span></span></Link>
+      <Link className="landing-brand" href="/" aria-label="AImigos home"><BrandLogo /><span>AImigos</span></Link>
       {room ? <ShareChat room={room} name={name.trim()} /> : <section className="create-chat" aria-labelledby="create-title">
         <Link className="create-back" href="/"><ArrowLeft size={16} aria-hidden="true" />Back to welcome</Link>
         <h1 id="create-title">Name your group chat</h1>

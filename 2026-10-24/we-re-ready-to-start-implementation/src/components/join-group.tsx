@@ -47,7 +47,7 @@ export default function JoinGroup() {
 
   return (
     <main className="landing">
-      <Link className="landing-brand" href="/" aria-label="friends home"><BrandLogo /><span>friends<span className="landing-brand-dot">.</span></span></Link>
+      <Link className="landing-brand" href="/" aria-label="AImigos home"><BrandLogo /><span>AImigos</span></Link>
       <section className="create-chat" aria-labelledby="nickname-title">
         <Link className="create-back" href="/"><ArrowLeft size={16} aria-hidden="true" />Back to welcome</Link>
         <h1 id="nickname-title">{invite ? "Choose your nickname" : "Join a group"}</h1>

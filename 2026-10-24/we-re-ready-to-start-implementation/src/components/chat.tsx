@@ -14,11 +14,29 @@ import Landing from "@/components/landing";
 export default function Chat() {
 
   const [leaving, setLeaving] = useState<{ id: string; name: string } | null>(null);
+  const [caret, setCaret] = useState(0);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionRoom, setMentionRoom] = useState("");
   const [showActivity, setShowActivity] = useState(false);
   const { userId, rooms, roomId, setRoomId, members, messages, name, setName, roomName, setRoomName, invite, setInvite, showCreate, setShowCreate, draft, setDraft, error, setError, busy, sending, retry, setRetry, connection, loading, hasOlder, copied, now, bottom, composer, activeRoom, selectRoom, leaveRoom, enterRoom, copyInvite, send, older, mention, visibleFriends } = useChat();
+  const mentionMatch = draft.slice(0, caret).match(/(?:^|\s)@([A-Za-z0-9_-]*)$/);
+  const suggestions = mentionOpen && mentionRoom === roomId && mentionMatch && !retry
+    ? visibleFriends.filter(friend => friend.name.toLowerCase().startsWith(mentionMatch[1].toLowerCase())) : [];
+  const selectedMention = Math.min(mentionIndex, Math.max(0, suggestions.length - 1));
+  function chooseMention(friendName: string) {
+    if (!mentionMatch) return;
+    const start = caret - mentionMatch[1].length - 1;
+    const tail = draft.slice(caret).replace(/^[A-Za-z0-9_-]*/, "");
+    const insertion = `@${friendName} `;
+    const next = draft.slice(0, start) + insertion + tail;
+    if (next.length > 4000) return;
+    setDraft(next); setMentionOpen(false);
+    requestAnimationFrame(() => { composer.current?.focus(); composer.current?.setSelectionRange(start + insertion.length, start + insertion.length); });
+  }
   return <div className={`app chat-workspace ${activeRoom ? "has-room" : ""}`}>
     <aside className="sidebar">
-      <a className="brand" href="/"><BrandLogo /> friends<span className="brand-dot">.</span></a>
+      <a className="brand" href="/"><BrandLogo /> AImigos</a>
       <a className="chat-new" href="/chat/create"><Plus size={18}/>New group chat</a>
       <div className="section-heading">Your groups</div>
       <nav>{rooms.map(room => <div className="room-row" key={room.id}><button className={`room-item ${room.id === roomId ? "selected" : ""}`} disabled={sending || Boolean(retry)} onClick={() => selectRoom(room.id)}><span className="room-icon">{room.name.slice(0, 1).toUpperCase()}</span><span>{room.name}<small>{room.ai_only ? "Private · You + AI" : "Your group"}</small></span></button><button className="leave-group" aria-label={`Leave ${room.name}`} title="Leave group" disabled={busy || sending || Boolean(retry)} onClick={() => setLeaving({id:room.id,name:room.name})}><LogOut size={16}/></button></div>)}</nav>
@@ -44,7 +62,15 @@ export default function Chat() {
         </div>
         <div className="composer-area">{error && <div role="alert" className="error">{error}<button aria-label="Dismiss error" onClick={() => setError("")}><X size={15}/></button></div>}
           {retry && !sending && <div className="retry"><span>Not confirmed: {retry.content.slice(0, 80)}</span><button onClick={() => void send()}><RefreshCw size={14}/>Retry</button><button onClick={() => {setDraft(retry.content);setRetry(null);}}>Edit as new</button></div>}
-          <form className="composer" onSubmit={send}><textarea ref={composer} aria-label="Message" placeholder={activeRoom.ai_only && visibleFriends.length === 1 ? `Message ${visibleFriends[0].name}…` : "Say something… @mention an AI friend to bring them in"} maxLength={4000} value={draft} disabled={Boolean(retry)} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }}/><button className="send-button" aria-label="Send message" disabled={sending || !draft.trim() || Boolean(retry)}><ArrowUp size={22}/></button></form>
+          {suggestions.length > 0 && <div className="mention-suggestions" id="mention-suggestions" role="listbox" aria-label="AI companions in this group">{suggestions.map((friend, index) => <button type="button" role="option" aria-selected={index === selectedMention} id={`mention-option-${index}`} key={friend.id} tabIndex={-1} onMouseDown={event => event.preventDefault()} onClick={() => chooseMention(friend.name)}><span className="mention-avatar">{friend.avatar}</span><span><strong>{friend.name}</strong><small>@{friend.name}</small></span></button>)}</div>}
+          <form className="composer" onSubmit={send}><textarea ref={composer} aria-label="Message" aria-autocomplete="list" aria-controls={suggestions.length ? "mention-suggestions" : undefined} aria-activedescendant={suggestions.length ? `mention-option-${selectedMention}` : undefined} placeholder={activeRoom.ai_only && visibleFriends.length === 1 ? `Message ${visibleFriends[0].name}…` : "Say something… @mention an AI friend to bring them in"} maxLength={4000} value={draft} disabled={Boolean(retry)} onChange={event => { setDraft(event.target.value); setCaret(event.target.selectionStart); setMentionIndex(0); setMentionOpen(true); setMentionRoom(roomId); }} onSelect={event => setCaret(event.currentTarget.selectionStart)} onBlur={() => setMentionOpen(false)} onKeyDown={event => {
+            if (event.nativeEvent.isComposing) return;
+            if (suggestions.length) {
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setMentionIndex((selectedMention + (event.key === "ArrowDown" ? 1 : -1) + suggestions.length) % suggestions.length); return; }
+              if ((event.key === "Enter" || event.key === "Tab") && !event.shiftKey) { event.preventDefault(); chooseMention(suggestions[selectedMention].name); return; }
+              if (event.key === "Escape") { event.preventDefault(); setMentionOpen(false); return; }
+            }
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }}/><button className="send-button" aria-label="Send message" disabled={sending || !draft.trim() || Boolean(retry)}><ArrowUp size={22}/></button></form>
         </div>
       </> : <><Landing embedded />{error && <div className="error" role="alert">{error}</div>}</>}
     </main>

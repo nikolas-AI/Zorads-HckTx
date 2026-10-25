@@ -902,11 +902,47 @@ html[data-chat-dark="true"] .agent-builder .builder-header > button:hover { back
 
 .chat-workspace .main > .landing { overflow-y: auto; min-height: 0; }
 
-.chat-workspace .brand { height: 64px; gap: 8px; padding-left: 4px; }
-.chat-workspace .brand-logo { width: 58px; height: 58px; }
+.chat-workspace .brand { height: 76px; gap: 8px; padding-left: 4px; }
+.chat-workspace .brand-logo { width: 68px; height: 68px; }
 
 .chat-workspace .chat-header-actions > .add-companion { display: inline-flex; justify-content: center; align-items: center; flex: 0 0 auto; gap: 6px; width: auto; min-height: 40px; padding: 8px 12px; border: 1px solid #b8dfe3; border-radius: 10px; font-size: 13px; line-height: 1.2; white-space: nowrap; }
 @media (max-width: 700px) { .chat-workspace .chat-header-actions { flex-wrap: wrap; justify-content: flex-end; } .chat-workspace .chat-header-actions > .add-companion { font-size: 12px; padding: 8px; } .chat-workspace .chat-header { flex-wrap: wrap; height: auto; } .chat-workspace .chat-header-actions { flex-basis: 100%; margin-left: 0; } }
 
 .chat-notice { display: flex; justify-content: center; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 14px auto; padding: 6px 12px; max-width: 100%; color: var(--muted); font-size: 12px; text-align: center; overflow-wrap: anywhere; }
 .chat-notice time { font-size: 10px; opacity: .75; white-space: nowrap; }
+
+/* Compact participant list: people first, companions second. */
+.participants-dropdown { width: min(310px, calc(100vw - 24px)); padding: 14px; }
+.participants-dropdown header { margin-bottom: 10px; padding-bottom: 8px; }
+.participants-dropdown h2 { font-size: 17px; }
+.participants-dropdown h3 { font-size: 12px; margin-bottom: 4px; }
+.participants-dropdown section + section { padding-top: 10px; margin-top: 10px; }
+.participants-dropdown .participant-row { min-height: 42px; padding: 5px 0; gap: 8px; }
+.participants-dropdown .participant-avatar { width: 30px; height: 30px; font-size: 14px; }
+.participants-dropdown .participant-name { font-size: 14px; line-height: 1.3; }
+.participants-dropdown .participant-name small { font-size: 12px; line-height: 1.3; margin-top: 2px; }
+.participants-dropdown .participant-mention { margin: 0 0 4px 38px; padding: 3px 0; }
+
+.composer-area { position: relative; }
+.mention-suggestions { position: absolute; bottom: calc(100% - 8px); left: 16px; z-index: 10; width: min(300px, calc(100% - 32px)); max-height: 230px; overflow-y: auto; padding: 6px; border: 1px solid #b8dfe3; border-radius: 12px; background: #fff; box-shadow: 0 8px 28px #193a4026; }
+.mention-suggestions button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px; border-radius: 8px; color: #193a40; }
+.mention-suggestions button[aria-selected="true"], .mention-suggestions button:hover { background: #e5f4f5; }
+.mention-avatar { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: #d6ecef; }
+.mention-suggestions strong { font-size: 14px; }
+.mention-suggestions small { display: block; color: #526b70; font-size: 12px; }
+
+/* Center starter cards without reserving empty columns for absent companions. */
+.chat-workspace .starters { display: flex; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 768px; margin: 0 auto 24px; gap: 12px; }
+.chat-workspace .starters button { flex: 0 1 320px; min-width: 0; align-items: center; gap: 16px; text-align: left; overflow-wrap: anywhere; }
+.chat-workspace .starters button > span { flex-shrink: 0; }
+@media (max-width: 700px) { .chat-workspace .starters button { flex-basis: 100%; } }
+
+/* Align the conversation heading with the sidebar's top branding row. */
+.chat-workspace .header-title { min-width: 0; }
+.chat-workspace .header-title h1 { font-size: 24px; font-weight: 800; line-height: 1.2; letter-spacing: -.5px; overflow-wrap: anywhere; }
+@media (min-width: 701px) {
+ .chat-workspace .chat-header { min-height: 100px; padding-top: 24px; padding-bottom: 0; align-items: center; }
+}
+@media (max-width: 700px) {
+ .chat-workspace .header-title h1 { font-size: 21px; }
+}

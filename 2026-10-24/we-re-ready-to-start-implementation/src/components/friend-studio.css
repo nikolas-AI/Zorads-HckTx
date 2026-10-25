@@ -69,3 +69,25 @@ html[data-chat-dark="true"] .studio-standalone input[type=checkbox] { accent-col
  .studio-feedback { padding:12px 20px; }
 }
 @media(max-width:380px) { .builder-skill-grid { grid-template-columns:1fr; } }
+
+.chat-workspace .agent-builder .builder-library .studio-companion-row { display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px; }
+.studio-standalone .builder-library .studio-companion-avatar { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; border-radius: 50%; background: #d6ecef; color: #0d4852; font-weight: 600; }
+.studio-standalone .builder-library .studio-companion-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.studio-companion-copy strong { font-size: 14px; line-height: 1.3; }
+.studio-companion-copy small { display: block; font-size: 11px; line-height: 1.3; white-space: nowrap; color: #526b70; }
+
+.custom-skill-entry { margin: 0 0 16px; padding: 14px; border: 1px solid var(--studio-border); border-radius: 10px; background: var(--studio-surface); }
+.studio-standalone .custom-skill-entry label { margin: 0 0 10px; }
+.custom-skill-heading { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+.custom-skill-heading svg { color: var(--studio-accent); flex-shrink: 0; }
+.studio-standalone .custom-skill-entry small { display: block; font-size: 12px; line-height: 1.6; color: var(--studio-muted); font-weight: 400; }
+.studio-standalone .custom-skill-entry input { margin: 0; padding: 9px 10px; font-size: 13px; border-radius: 8px; }
+.chat-workspace .custom-skill-entry .button { min-height: 36px; padding: 8px 10px; font-size: 12px; border-radius: 8px; gap: 5px; }
+.custom-skill-entry:focus-within { border-color: var(--studio-accent); }
+.custom-skill-entry .builder-tags:empty { display: none; }
+.custom-skill-entry > small { margin-top: 8px; }
+.custom-skill-entry > div:first-of-type { display: flex; align-items: center; gap: 8px; }
+.custom-skill-entry input { min-width: 0; flex: 1; }
+.custom-skill-entry .button { flex-shrink: 0; }
+.custom-skill-entry .builder-tags { margin: 10px 0; }
+.custom-skill-entry .builder-tags button { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--studio-border); background: var(--studio-soft); color: var(--studio-accent); border-radius: 8px; padding: 6px 10px; font-size: 12px; overflow-wrap: anywhere; }

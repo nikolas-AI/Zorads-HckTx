@@ -22,17 +22,6 @@ export default function ParticipantsDropdown({ friends, members, userId, onMenti
     <button className="participants-trigger" popoverTarget={id} aria-label="Show participants" title="Participants"><Users size={20} /></button>
     <div id={id} ref={popup} popover="auto" className="participants-dropdown" aria-label="Group participants">
       <header><h2>Participants</h2><button aria-label="Close participants" popoverTarget={id} popoverTargetAction="hide"><X size={18} /></button></header>
-      <section aria-labelledby={`${id}-ai`}>
-        <h3 id={`${id}-ai`}><Bot size={16} />YOUR AI FRIENDS · {friends.length}</h3>
-        <ul>
-          {friends.map(friend => <li key={friend.id}><button className="participant-row" onClick={() => { onProfile(friend.id); popup.current?.hidePopover(); }}>
-            <span className="participant-avatar participant-ai">{friend.avatar}</span>
-            <span className="participant-name">{friend.name}<small>{friend.specialty}</small></span>
-            <span className="participant-badge">AI</span>
-          </button><button className="participant-mention" aria-label={`Mention ${friend.name}`} onClick={()=>{onMention(friend.name);popup.current?.hidePopover();}}>Mention @{friend.name}</button></li>)}
-        </ul>
-        {!friends.length && <p className="participants-empty">No AI friends in this group yet.</p>}
-      </section>
       <section aria-labelledby={`${id}-humans`}>
         <h3 id={`${id}-humans`}><Users size={16} />YOUR PEOPLE · {members.length}</h3>
         <ul>
@@ -42,6 +31,17 @@ export default function ParticipantsDropdown({ friends, members, userId, onMenti
           </li>)}
         </ul>
         {!members.length && <p className="participants-empty">No people to show yet.</p>}
+      </section>
+      <section aria-labelledby={`${id}-ai`}>
+        <h3 id={`${id}-ai`}><Bot size={16} />AI COMPANIONS · {friends.length}</h3>
+        <ul>
+          {friends.map(friend => <li key={friend.id}><button className="participant-row" onClick={() => { onProfile(friend.id); popup.current?.hidePopover(); }}>
+            <span className="participant-avatar participant-ai">{friend.avatar}</span>
+            <span className="participant-name">{friend.name}<small>{friend.specialty}</small></span>
+            <span className="participant-badge">AI</span>
+          </button><button className="participant-mention" aria-label={`Mention ${friend.name}`} onClick={()=>{onMention(friend.name);popup.current?.hidePopover();}}>Mention @{friend.name}</button></li>)}
+        </ul>
+        {!friends.length && <p className="participants-empty">No AI friends in this group yet.</p>}
       </section>
     </div>
   </>;
