@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowUp, Plus, Users, Link as LinkIcon, X, MessageCircle, Sparkles, ChevronLeft, Check, RefreshCw } from "lucide-react";
+import CreateAiFriend from "@/components/create-ai-friend";
 import { useChat } from "@/hooks/use-chat";
 import { friends } from "@/lib/friends";
 import { configured } from "@/lib/supabase";
@@ -19,7 +20,7 @@ export default function Chat() {
     </aside>
     <main className="main">
       {activeRoom ? <>
-        <header className="chat-header"><button className="mobile-back" aria-label="Back to groups" disabled={sending || Boolean(retry)} onClick={() => setRoomId("")}><ChevronLeft/></button><div className="room-icon header-icon">{activeRoom.name.slice(0,1).toUpperCase()}</div><div className="header-title"><h1>{activeRoom.name}</h1><p><span className={`status-dot ${connection === "Live" ? "live" : ""}`}/>{connection} <span className="separator">·</span> {members.length} {members.length === 1 ? "person" : "people"} + 3 AI friends</p></div><button className="button invite-button" onClick={copyInvite}>{copied ? <Check size={16}/> : <LinkIcon size={16}/>}<span>{copied ? "Copied!" : "Invite friends"}</span></button><button className="people-toggle" aria-label="Show participants" onClick={() => setShowPeople(true)}><Users size={20}/></button></header>
+        <header className="chat-header"><button className="mobile-back" aria-label="Back to groups" disabled={sending || Boolean(retry)} onClick={() => setRoomId("")}><ChevronLeft/></button><div className="room-icon header-icon">{activeRoom.name.slice(0,1).toUpperCase()}</div><div className="header-title"><h1>{activeRoom.name}</h1><p><span className={`status-dot ${connection === "Live" ? "live" : ""}`}/>{connection} <span className="separator">·</span> {members.length} {members.length === 1 ? "person" : "people"} + 3 AI friends</p></div><button className="button invite-button" onClick={copyInvite}>{copied ? <Check size={16}/> : <LinkIcon size={16}/>}<span>{copied ? "Copied!" : "Invite friends"}</span></button><CreateAiFriend key={roomId} room={roomId} /><button className="people-toggle" aria-label="Show participants" onClick={() => setShowPeople(true)}><Users size={20}/></button></header>
         <div className="conversation" role="log" aria-label="Group messages" aria-live="polite">
           <div className="conversation-intro"><span>THE START OF SOMETHING GOOD</span><h2>Everybody’s here.<br/>Make yourselves at home.</h2><p>Catch up with your people. Bring in a fresh perspective.</p></div>
           {hasOlder && <button className="older button" onClick={older}>Load earlier messages</button>}

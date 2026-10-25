@@ -55,3 +55,12 @@
 .share-copy { background: #edf7f8; color: #193a40; border-color: #dbe5e5; }
 .share-copy:hover { background: #d6ecef; }
 .share-status { display: block; min-height: 20px; margin-top: 8px; font-size: var(--text-label); color: #526b70; }
+
+.ai-friend-menu { position: relative; order: 2; flex-shrink: 0; }
+.ai-create-button { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 9px; color: #0d7484; border-color: #b8dfe3; background: #edf7f8; list-style: none; cursor: pointer; }
+.ai-create-button::-webkit-details-marker { display: none; }
+.ai-create-button:hover { background: #d6ecef; }
+.ai-create-button:focus-visible { outline: 3px solid #128c9e; outline-offset: 3px; }
+.ai-friend-menu nav { position: absolute; right: 0; top: calc(100% + 8px); z-index: 6; width: 240px; padding: 6px; background: #fff; border: 1px solid #dbe5e5; border-radius: 12px; box-shadow: 0 8px 28px #193a4020; }
+.ai-friend-menu nav a { display: block; padding: 12px; border-radius: 8px; font-size: 14px; color: #193a40; }
+.ai-friend-menu nav a:hover { background: #edf7f8; }
