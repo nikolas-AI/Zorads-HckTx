@@ -14,5 +14,5 @@ export function parseInvite(value: string): Invite | null {
 }
 
 export function invitePath({ room, token }: Invite): string {
-  return `/chat#${new URLSearchParams({ room, invite: token })}`;
+  return `/chat/join#${new URLSearchParams({ room, invite: token })}`;
 }

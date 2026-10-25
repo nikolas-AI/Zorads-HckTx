@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { validateNickname } from "@/lib/nicknames";
 import { identity } from "@/lib/identity";
 import { browserDb, configured } from "@/lib/supabase";
+import { roomInviteLink } from "@/lib/room-invite";
 import { friends } from "@/lib/friends";
 import { mergeMessages } from "@/lib/messages";
 import { invitePath, parseInvite, type Invite } from "@/lib/invites";
@@ -45,7 +47,8 @@ export function useChat() {
     setName(localStorage.getItem("friends-name") || "");
     setShowCreate(new URLSearchParams(window.location.search).get("create") === "1");
     const hash = new URLSearchParams(window.location.hash.slice(1));
-    setInvite(parseInvite(window.location.href));
+    const invitation = parseInvite(window.location.href);
+    if (invitation) { window.location.replace(invitePath(invitation)); return; }
     if (!configured) return;
     let alive = true;
     void (async () => {
@@ -90,7 +93,10 @@ export function useChat() {
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.at(-1)?.id, messages.at(-1)?.status]);
   function selectRoom(id: string) { setDraft(""); setRoomId(id); setError(""); history.replaceState(null, "", `?room=${id}`); }
   async function enterRoom(event: FormEvent) {
-    event.preventDefault(); setBusy(true); setError("");
+    event.preventDefault();
+    const validation = validateNickname(name);
+    if (validation) { setError(validation); return; }
+    setBusy(true); setError("");
     try {
       const db = browserDb();
       const { data, error } = invite ? await db.rpc("join_room", { p_room: invite.room, p_invite: invite.token, p_display_name: name.trim() }) : await db.rpc("create_room", { p_name: roomName.trim(), p_display_name: name.trim() });
@@ -101,9 +107,8 @@ export function useChat() {
   }
   async function copyInvite() {
     try {
-      const { data, error } = await browserDb().rpc("room_invite", { p_room: roomId });
-      if (error) throw error;
-      await navigator.clipboard.writeText(`${location.origin}${invitePath({ room: roomId, token: data })}`);
+      const link = await roomInviteLink(roomId, location.origin);
+      await navigator.clipboard.writeText(link);
       setCopied(true); setTimeout(() => setCopied(false), 2500);
     } catch { setError("Couldn't copy the invite. Use HTTPS or localhost and allow clipboard access."); }
   }
