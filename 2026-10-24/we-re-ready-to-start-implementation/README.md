@@ -75,3 +75,10 @@ Open profiles through library cards, chat participant names, or AI message names
 Privacy uses room-filtered message context, not a cross-chat memory store. Ownership uses the existing anonymous Supabase identity; clearing that browser's storage loses access to creator controls. Limits: 50 library friends/user, 10 active custom friends/group, six skills/friend, and the existing message/inference limits.
 
 Validation: 22 automated tests, including migration preservation, RLS, ownership, permission revocation, group-only edits, template forks, private rooms, routing, and isolated model context. TypeScript and production build pass. Browser checked template prefilling, skill selection/limits and previews. Live save/add/chat still needs migration 004 in Supabase. Phase 2 timeout behavior is unchanged.
+
+
+## Welcome and group lifecycle
+
+Apply `supabase/migrations/006_group_lifecycle.sql` once after migration 004, alongside this app revision. It preserves existing group rosters and makes newly created groups start without AI friends. Leave group removes only the current user's membership, preserving messages for the other members. Private AI chats cannot be rejoined using an invite.
+
+The home page offers Create a group, Join a group, and Continue previous group for an existing session. Opening `/chat` without a room no longer automatically selects a group. The last visited room is remembered in this browser and validated against accessible rooms before being offered. Direct room and invite links still work.

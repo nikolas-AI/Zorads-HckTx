@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     if (historyError || peopleError || agentsError) throw new Error('Could not read conversation');
     const { data: room, error: roomError } = await db.from('rooms').select('ai_only').eq('id', roomId).single();
     if (roomError) throw new Error('Room not found');
-    const route = routeRoomMessage(content, history || [], user.id, (people || []).map(p=>p.display_name), agents || [], room.ai_only);
+    const route = routeRoomMessage(content, (history || []).filter(message => !message.event_type), user.id, (people || []).map(p=>p.display_name), agents || [], room.ai_only);
     const admin = serverDb();
     const { error } = await admin.rpc('submit_routed_message', { p_id: id, p_room: roomId, p_user: user.id, p_content: content, p_routing: route });
     if (error) return NextResponse.json({ error: error.code === 'PGRST202' ? 'Apply the Phase 2 database migration before using this version.' : error.message }, { status: 400 });

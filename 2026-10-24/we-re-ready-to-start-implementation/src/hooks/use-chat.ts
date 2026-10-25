@@ -5,7 +5,6 @@ import { validateNickname } from "@/lib/nicknames";
 import { identity } from "@/lib/identity";
 import { browserDb, configured } from "@/lib/supabase";
 import { roomInviteLink } from "@/lib/room-invite";
-import { friends } from "@/lib/friends";
 import { mergeMessages } from "@/lib/messages";
 import { invitePath, parseInvite, type Invite } from "@/lib/invites";
 import type { Agent, Member, Message, Room } from "@/lib/types";
@@ -58,13 +57,14 @@ export function useChat() {
         const all = await loadRooms();
         const requested = new URLSearchParams(window.location.search).get("room");
         if (!alive) return;
-        if (!hash.has("invite")) setRoomId(all.find(r => r.id === requested)?.id || all[0]?.id || "");
+        if (!hash.has("invite")) setRoomId(all.find(r => r.id === requested)?.id || "");
       } catch (e) { if (alive) setError(e instanceof Error ? e.message : "Could not connect."); }
     })();
     return () => { alive = false; };
   }, []);
   useEffect(() => {
     if (!roomId || !userId) return;
+    try { localStorage.setItem("friends-last-room", roomId); } catch {}
     const db = browserDb(); let alive = true;
     setMessages([]); setMembers([]); setAgents([]); setLoading(true); setConnection("Connecting");
     const sync = async () => {
@@ -90,6 +90,18 @@ export function useChat() {
   }, [roomId, userId]);
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.at(-1)?.id, messages.at(-1)?.status]);
   function selectRoom(id: string) { setDraft(""); setRoomId(id); setError(""); history.replaceState(null, "", `?room=${id}`); }
+  async function leaveRoom(id: string) {
+    if (busy || sending || retry) return;
+    setBusy(true); setError("");
+    try {
+      const { error } = await browserDb().rpc("leave_room", { p_room: id });
+      if (error) throw new Error(error.code === "PGRST202" ? "Apply migration 006 to enable leaving groups." : error.message);
+      setRooms(previous => previous.filter(room => room.id !== id));
+      try { if (localStorage.getItem("friends-last-room") === id) localStorage.removeItem("friends-last-room"); } catch {}
+      if (roomId === id) { setRoomId(""); setMessages([]); setMembers([]); setAgents([]); setDraft(""); history.replaceState(null, "", "/chat"); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not leave this group."); }
+    finally { setBusy(false); }
+  }
   async function enterRoom(event: FormEvent) {
     event.preventDefault();
     const validation = validateNickname(name);
@@ -135,7 +147,7 @@ export function useChat() {
     if (error) throw new Error("Your change was saved, but the friend list could not refresh. Reopen the group.");
     setAgents(data || []);
   }
-  const visibleFriends = agents.length ? agents : activeRoom?.ai_only ? [] : friends;
+  const visibleFriends = agents;
   const roomAgents = agents.filter(a => !a.archived && (!a.room_id || a.room_id === roomId));
-  return { userId, rooms, roomId, setRoomId, members, messages, name, setName, roomName, setRoomName, invite, setInvite, showCreate, setShowCreate, draft, setDraft, error, setError, busy, sending, retry, setRetry, connection, loading, hasOlder, copied, now, bottom, composer, activeRoom, selectRoom, enterRoom, copyInvite, send, older, mention, visibleFriends, roomAgents, reloadAgents };
+  return { userId, rooms, roomId, setRoomId, members, messages, name, setName, roomName, setRoomName, invite, setInvite, showCreate, setShowCreate, draft, setDraft, error, setError, busy, sending, retry, setRetry, connection, loading, hasOlder, copied, now, bottom, composer, activeRoom, selectRoom, leaveRoom, enterRoom, copyInvite, send, older, mention, visibleFriends, roomAgents, reloadAgents };
 }

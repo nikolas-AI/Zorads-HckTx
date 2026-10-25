@@ -21,13 +21,13 @@ export function routeMessage(content: string, history: Message[], userId: string
   history = [...history].sort((a,b) => a.created_at.localeCompare(b.created_at) || (a.parent_id === b.id ? 1 : b.parent_id === a.id ? -1 : a.id.localeCompare(b.id)));
   const explicit = mentionedAgent(content, agents);
   const name = content.match(/^(?:hey\s+)?([A-Za-z][A-Za-z0-9_-]*)(?:\s*[,!:?]|\s+(?:can|could|would|please|help|what|why|how|that|rethink|dig)\b)/i)?.[1]?.toLowerCase();
-  const named = name && !humanNames.some(n => n.toLowerCase() === name) ? agents.find(a => a.name.toLowerCase() === name)?.id : null;
+  const named = name && !humanNames.some(n => n.toLowerCase() === name) ? agents.find(a => a.id !== 'zorad' && a.name.toLowerCase() === name)?.id : null;
   let agentId = explicit || named || null;
   const complete = history.filter(m => m.status === 'complete');
   const last = history.at(-1);
   const isFollowup = followup.test(content);
   // Unnamed replies only continue this user's immediately preceding AI exchange.
-  if (!agentId && isFollowup && last?.agent_id && agents.some(a => a.id === last.agent_id) && last.status === 'complete' && now - Date.parse(last.created_at) < 10 * 60_000 && complete.some(m => m.id === last.parent_id && m.user_id === userId)) agentId = last.agent_id;
+  if (!agentId && isFollowup && last?.agent_id && last.agent_id !== 'zorad' && agents.some(a => a.id === last.agent_id) && last.status === 'complete' && now - Date.parse(last.created_at) < 10 * 60_000 && complete.some(m => m.id === last.parent_id && m.user_id === userId)) agentId = last.agent_id;
   if (!agentId) return { agentId: null, complexity: 'LOW', escalate: false, replyToId: null, clarify: false, reason: 'Human conversation; no clear invitation to an AI friend.' };
   const candidates = [...complete].reverse().filter(m => m.agent_id === agentId);
   const ownReplies = candidates.filter(m => complete.some(q => q.id === m.parent_id && q.user_id === userId));
@@ -44,5 +44,6 @@ export function routeMessage(content: string, history: Message[], userId: string
 // A private chat with one AI has an unambiguous addressee; groups still require an invitation.
 export function routeRoomMessage(content:string, history:Message[], userId:string, humanNames:string[], agents:{id:string;name:string}[], aiOnly:boolean, now=Date.now()) {
  const route=routeMessage(content,history,userId,humanNames,now,agents);
- return aiOnly && agents.length===1 && !route.agentId ? routeMessage(`@${agents[0].name} ${content}`,history,userId,humanNames,now,agents) : route;
+ const conversational = agents.filter(a => a.id !== 'zorad');
+ return aiOnly && conversational.length===1 && !route.agentId ? routeMessage(`@${conversational[0].name} ${content}`,history,userId,humanNames,now,agents) : route;
 }
